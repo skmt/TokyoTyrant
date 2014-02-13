@@ -1,0 +1,12 @@
+// for TokyoTyrant server
+
+{
+	"tokyotyrant_ports" : [
+		"11311", "11312", "11313"
+	],
+	"run_list" : [
+		"role[tokyotyrant]"
+	]
+}
+
+// end

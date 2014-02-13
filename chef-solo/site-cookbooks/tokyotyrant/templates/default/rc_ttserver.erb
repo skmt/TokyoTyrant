@@ -1,0 +1,119 @@
+#! /bin/sh
+#
+# chkconfig: - 55 45
+# description:  ttserver - the server of Tokyo Tyrant
+# processname: ttserver
+
+# Standard LSB functions
+#. /lib/lsb/init-functions
+
+# Source function library.
+. /etc/init.d/functions
+
+# CAUTION
+#  If you would like to replicate between master and slave, set the following variables;
+#    MASTER_SERVER: master server's ip address or host name
+#    SERVER_ID: this server's id which isn't equivalent of master's
+#    PORT: master and slave use this number to replicate data
+#
+MASTER_SERVER=
+PORT=<%= @port %>
+SERVER_ID=1
+TIMEOUT=10
+BASEDIR="/var/lib/tt.${PORT}"
+LOG="${BASEDIR}/tt.log"
+ULOG="${BASEDIR}/ulog"
+RTSFILE="${BASEDIR}/rts"
+DBFILE="${BASEDIR}/tt.tch#bnum=10000000#xmsiz=512m#opts=ld"
+OPTIONS="-thnum 8 -sid ${SERVER_ID} -log ${LOG} -le -ulog ${ULOG} -ulim 1g -rts ${RTSFILE}"
+
+# Check that networking is up.
+. /etc/sysconfig/network
+
+if [ "$NETWORKING" = "no" ]
+then
+        exit 0
+fi
+
+if [ "x${PORT}" = "x" ]; then
+        exit
+fi
+
+RETVAL=0
+prog="ttserver"
+pidfile=${PIDFILE-/var/run/ttserver.$PORT.pid}
+lockfile=${LOCKFILE-/var/lock/subsys/ttserver.$PORT}
+
+prepare() {
+        if [ ! -d ${ULOG} ]; then
+                mkdir -p ${ULOG}
+        fi
+}
+
+start () {
+        echo -n $"Starting $prog: "
+        daemon --pidfile ${pidfile} /usr/bin/ttserver -port $PORT -dmn -tout $TIMEOUT -pid ${pidfile} $OPTIONS $DBFILE
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && touch ${lockfile}
+}
+stop () {
+        echo -n $"Stopping $prog: "
+        killproc -p ${pidfile} /usr/bin/ttserver
+        RETVAL=$?
+        echo
+        if [ $RETVAL -eq 0 ] ; then
+                rm -f ${lockfile} ${pidfile}
+        fi
+}
+
+restart () {
+        stop
+        start
+}
+
+
+# See how we were called.
+case "$1" in
+  start)
+        prepare
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  status)
+        status -p ${pidfile} -l ${lockfile} ttserver
+        RETVAL=$?
+        ;;
+  list)
+        /usr/bin/tcrmgr list -port ${PORT} localhost
+        RETVAL=$?
+        ;;
+  inform)
+        /usr/bin/tcrmgr inform -port ${PORT} localhost
+        RETVAL=$?
+        ;;
+  start_repl)
+        if [ "x${MASTER_SERVER}" = "x" ]; then
+                echo "This host is running as master, can't execute with this option"
+                RETVAL=2
+        else
+                echo "start replication"
+                /usr/bin/tcrmgr setmst -port ${PORT} -mport ${PORT} localhost ${MASTER_SERVER}
+                RETVAL=$?
+        fi
+        ;;
+  restart|reload|force-reload)
+        restart
+        ;;
+  condrestart|try-restart)
+        [ -f ${lockfile} ] && restart || :
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|status|restart|reload|force-reload|condrestart|try-restart|list|inform|start_repl}"
+        RETVAL=2
+        ;;
+esac
+
+exit $RETVAL

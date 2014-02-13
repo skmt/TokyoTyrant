@@ -1,0 +1,17 @@
+// Role for TokyoTyrant
+
+{
+	"name" : "tokyotyrant",
+	"default_attributes" : {
+		"tokyotyrant_ports" : [
+			"11911"
+		]
+	},
+	"override_attributes" : {},
+	"json_class" : "Chef::Role",
+	"description" : "",
+	"chef_type" : "role",
+	"run_list" : [
+		"recipe[tokyotyrant]"
+	]
+}

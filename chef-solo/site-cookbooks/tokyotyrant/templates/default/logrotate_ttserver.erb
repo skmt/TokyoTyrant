@@ -1,0 +1,8 @@
+/var/lib/tt.<%= @port %>/tt.log
+{
+    rotate 7
+    compress
+    postrotate
+        /bin/kill -HUP `cat /var/run/ttserver.<%= @port %>.pid 2> /dev/null` 2> /dev/null || true
+    endscript
+}
